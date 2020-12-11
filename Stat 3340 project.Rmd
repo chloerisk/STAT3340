@@ -1,7 +1,8 @@
 ---
 title: "STAT 3340 Project"
 author: "Chloe Risk, Ran Guo"
-date: "10/12/2020"
+group: "40"
+dataset: "9"
 output:
   html_document: default
 ---
@@ -10,7 +11,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 #Abstract
-In this project, we perform a complete regression analysis to determine the relationship between used car prices and eleven independent variables. Our data is sourced from https://www.kaggle.com/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv. Our results suggest that there is a correlation between the maximum power of a car and the price that it is. 
+In this project, we perform a complete regression analysis to determine the relationship between used car prices and eleven independent variables. Our data is sourced from https://www.kaggle.com/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv. Our results suggest that there is a significant correlation between the maximum power of a car the car's selling price. 
 
 #Introduction
 This is a regression analysis to examine the relationship between the price of a car and 12 independent variables in a dataset of 8129 observations. The independent variables in this analysis include name, year, km driven, fuel type, seller type, transmission, owner, mileage, engine, maximum power, torque, and number of seats. We can use this analysis determine the relationship between car details and price as well as to predict the price of cars in the future. 
@@ -18,7 +19,7 @@ This is a regression analysis to examine the relationship between the price of a
 #Data Description
 Our data is sourced from https://www.kaggle.com/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv which contains information about used cars from www.cardekho.com. 
 
-We have added our unique data point to the last row of the csv final. We used a point that is close to the average of all the other data so that we are not introducing a point that could have a significant influence on our analysis. 
+We have added our unique data point to the last row of the csv file. We used a point that is close to the average of all the other data so that we are not introducing a point that could have a significant influence on our analysis. 
 
 We must first load in all necessary libraries. 
 ```{r}
@@ -34,6 +35,7 @@ library(corrplot)
 library(olsrr)
 library(GGally)
 ```
+
 We will now look at the preliminary summaries of this dataset. 
 ```{r}
 #Import the data set
@@ -47,7 +49,7 @@ Here we can see a basic summary of the data with all details included.
 summary(data)
 ```
 
-Next, we removed any special characters from the data to make it easier to analyse. 
+Next, we removed any special characters from the data to make it easier to analyze. 
 ```{r}
 #clean columns with symbols
 data <- data[,-1]
@@ -97,7 +99,7 @@ ggpairs(data[,c(1,2,3,7:11)],aes(color=owner))+
   theme_bw()
 ```
 
-We then split our data into training and test sets to get a new model. This model shows up that
+We then split our data into training and test sets to get a new model. 
 ```{r}
 #test train split
 data <- data[complete.cases(data),]
@@ -107,13 +109,15 @@ test_data <- data[-sub,]
 fullModel<-lm(selling_price~.,data=train_data)
 ```
 
-Next, we found our stepwise model and validated it by looking at VIFs and confidence intervals. 
+Next, we found our stepwise model from the training and test sets.
 ```{r}
 #Stepwise Model Selection
 step_model <-stepAIC(fullModel, direction="both", trace=F)
 summary(step_model)
 ```
+From the p-values of the coefficients, we can see that only a handle have significance in this model.   
 
+We then validated the model y looking at VIFs and confidence intervals. We determined that a VIF of 3 or greater is deemed high in this model. From that, we can see that there may be some collinearity between mileage, max power, and engine variables.   
 ```{r}
 select_mod <- step(fullModel)
 
@@ -153,4 +157,8 @@ plot(step_model, which=4, col=c("blue"))
 ```
 
 #Conclusion
- 
+The aim of this analysis was to observe which variable had the most influence on a car's selling price. We found that the variable with the most influence was that of maximum power. It is clear through our analysis of p-values, VIFs, and stepwise modelling that max power had the most influence, however variable such as the type of engine and mileage were also influential in determining price.This model can be used for further prediction of prices based on these influential variables.  
+
+#Appendix 
+Data is from https://www.kaggle.com/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv in the subset "Car details v3.csv"
+The data with the additional data point is in the file "Car details v3.csv" in our github.  
