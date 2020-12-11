@@ -1,0 +1,156 @@
+---
+title: "STAT 3340 Project"
+author: "Chloe Risk, Ran Guo"
+date: "10/12/2020"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Abstract
+In this project, we perform a complete regression analysis to determine the relationship between used car prices and eleven independent variables. Our data is sourced from https://www.kaggle.com/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv. Our results suggest that there is a correlation between the maximum power of a car and the price that it is. 
+
+#Introduction
+This is a regression analysis to examine the relationship between the price of a car and 12 independent variables in a dataset of 8129 observations. The independent variables in this analysis include name, year, km driven, fuel type, seller type, transmission, owner, mileage, engine, maximum power, torque, and number of seats. We can use this analysis determine the relationship between car details and price as well as to predict the price of cars in the future. 
+
+#Data Description
+Our data is sourced from https://www.kaggle.com/nehalbirla/vehicle-dataset-from-cardekho?select=Car+details+v3.csv which contains information about used cars from www.cardekho.com. 
+
+We have added our unique data point to the last row of the csv final. We used a point that is close to the average of all the other data so that we are not introducing a point that could have a significant influence on our analysis. 
+
+We must first load in all necessary libraries. 
+```{r}
+#Load Packages
+library(caret)
+library(MPV)
+library(faraway)
+library(mltools)
+library(data.table)
+library(MASS)
+library(VIM)
+library(corrplot)
+library(olsrr)
+library(GGally)
+```
+We will now look at the preliminary summaries of this dataset. 
+```{r}
+#Import the data set
+rm(list=ls())
+data <- read.csv('Car details v3.csv')
+head(data)
+```
+
+Here we can see a basic summary of the data with all details included.
+```{r}
+summary(data)
+```
+
+Next, we removed any special characters from the data to make it easier to analyse. 
+```{r}
+#clean columns with symbols
+data <- data[,-1]
+data$car_age <- 2020 - data$year
+data$max_power <- as.numeric(gsub("[a-zA-Z/]", "", data$max_power))
+data$engine <- as.numeric(gsub("[a-zA-Z/]","",data$engine))
+data$mileage <- as.numeric(gsub("[a-zA-Z]","",data$mileage))
+```
+
+We received a warning that NAs were introduced so we have removed them in the following step. 
+```{r}
+#remove NAs
+data <- data[complete.cases(data),]
+anyNA(data)
+```
+
+#Methods
+We removed unwanted variables from our data, as shown below as they do not have significant influence on the dataset. The variables that were removed are the torque column, and any rows where the mileage is zero.
+```{r}
+#taking out torque column 
+data <- data.frame(data[,-11])
+#take out rows where mileage is 0
+data <- data[!(data$mileage<0.001),1]
+head(data)
+summary(data)
+```
+ 
+We then transformed the data by calculating the log of price, km driven, and max power. 
+```{r}
+#get logs then check data
+data$selling_price <- log(data$selling_price)
+data$km_driven <- log(data$km_driven)
+data$max_power <- log(data$max_power)
+summary(data)
+```
+
+We were then able to generate a correlation plot using the log data.
+The most notable correlation in this plot is the strong positive correlation between selling price and maximum power. This is expected as the more power a car has, the more expensive it is bound to be.   
+```{r}
+corrplot(cor(data[,c(1,2,3,8,9,10,11)]))
+```
+
+We generated a ggpair plot to further analyze the relationship between variables. 
+```{r}
+ggpairs(data[,c(1,2,3,7:11)],aes(color=owner))+
+  ggtitle("GGally_ggpairs")+
+  theme_bw()
+```
+
+We then split our data into training and test sets to get a new model. This model shows up that
+```{r}
+#test train split
+data <- data[complete.cases(data),]
+sub<-sample(1:nrow(data),round(nrow(data)*2/3))
+train_data <-data[sub,]
+test_data <- data[-sub,]
+fullModel<-lm(selling_price~.,data=train_data)
+```
+
+Next, we found our stepwise model and validated it by looking at VIFs and confidence intervals. 
+```{r}
+#Stepwise Model Selection
+step_model <-stepAIC(fullModel, direction="both", trace=F)
+summary(step_model)
+```
+
+```{r}
+select_mod <- step(fullModel)
+
+#VIF 
+#We analyze the multicollinearity by looking at our VIFs.  
+vif(select_mod)
+
+#CONFIDENCE INTERVALS
+confint(select_mod)
+```
+
+#Results
+To get a better visualization of the results of this stepwise model, we have generated the following graphs. 
+
+This Residuals vs fitted plot graph shows the assumption that the relationship is linear, is reasonable. We can also infer that the variances of the error terms are equal. There are a couple outliers, this may be due to some cars being sold at a price that was not in line with the norm for their details. We are not too concerned about these outliers because they do not have a significant influence on the rest of the data.  
+```{r}
+#Residuals vs fitted plot
+plot(step_model, which=1, col=c("blue")) 
+```
+
+Next we have a Q-Q plot. This plot shows that we have a normally distributed data set. There are some outliers at the high and low ends of the graph but we are not concerned about them as they are distanced from the majority of the observations. 
+```{r}
+#Q-Q Plot
+plot(step_model, which=2, col=c("red"))
+```
+
+We then generated a scale location plot. This splot shows slight evidence of a non-linear relationship.
+```{r}
+#Scale Location Plot
+plot(step_model, which=3, col=c("blue"))
+```
+
+Our residuals vs leverage plot shows us the cook's distance to measure a data point's influence. We can see we have three outliers, however we are not concerned about them because they have a Cook's distance of no more than 0.3. 
+```{r}
+#Residuals vs Leverage
+plot(step_model, which=4, col=c("blue"))
+```
+
+#Conclusion
+ 
